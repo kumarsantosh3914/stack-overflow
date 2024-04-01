@@ -21,6 +21,7 @@ import { QuestionsSchema } from "@/lib/validations";
 // import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Badge } from "../ui/badge";
+import { createQuestion } from "@/lib/actions/question.action";
 
 const type: any = 'create';
 
@@ -40,10 +41,15 @@ const Question = () => {
       })
     
       // 2. Define a submit handler.
-      function onSubmit(values: z.infer<typeof QuestionsSchema>) {
-        // Do something with the form values.
-        // ✅ This will be type-safe and validated.
-        console.log(values)
+      async function onSubmit(values: z.infer<typeof QuestionsSchema>) {
+        setIsSubmitting(true);
+
+        try {
+          // make an async call to your API -> create a question
+          await createQuestion({});
+        } catch (error) {
+          
+        }
       }
 
       const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>,
@@ -115,7 +121,7 @@ const Question = () => {
                   editorRef.current = editor
                 }}
                 onBlur={field.onBlur}
-                // onEditorChange={(content) => field.onChange(content)}
+                onEditorChange={(content) => field.onChange(content)}
                 // initialValue={parsedQuestionDetails?.content || ''}
                 init={{
                   height: 350,
