@@ -2,7 +2,7 @@
 
 import User from "@/database/user.model";
 import { connectToDatabase } from "../mongoose";
-import { CreateUserParams, DeleteUserParams, UpdateUserParams } from "./shared.types";
+import { CreateUserParams, DeleteUserParams, GetAllUsersParams, ToggleSaveQuestionParams, UpdateUserParams } from "./shared.types";
 import { revalidatePath } from "next/cache";
 import Question from "@/database/question.model";
 
@@ -74,6 +74,57 @@ export async function deleteUser(params: DeleteUserParams) {
         const deleteUser = await User.findByIdAndDelete(user._id);
 
         return deleteUser;
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+}
+
+export async function getAllUsers(params: GetAllUsersParams) {
+    try {
+        connectToDatabase();
+
+        // const {page = 1, pageSize = 20, fliter, searchQuery}  = params;
+
+        const users = await User.find({})
+        .sort({createdAt: -1});
+
+        return {users};
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+}
+
+export async function toggleSaveQuestion(params: ToggleSaveQuestionParams) {
+    try {
+        connectToDatabase();
+
+        const {userId, questionId, path} = params;
+
+        const user = await User.findById(userId);
+
+        if(!user) {
+            throw new Error('User not found');
+        }
+
+        const isQuestionSaved = user.save.include(questionId);
+
+        if(isQuestionSaved) {
+            // remove question from save 
+            await User.findByIdAndUpdate(userId,
+                {$pull: {saved: questionId}},
+                {new: true}
+            )
+        } else {
+            // add question to saved
+            await User.findByIdAndUpdate(userId, 
+                {$addToSet: {saved: questionId}},
+                {new: true}
+            )
+        }
+
+        revalidatePath(path);
     } catch (error) {
         console.log(error);
         throw error;
