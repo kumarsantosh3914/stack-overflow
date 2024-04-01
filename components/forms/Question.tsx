@@ -18,18 +18,23 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { QuestionsSchema } from "@/lib/validations";
-// import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Badge } from "../ui/badge";
 import { createQuestion } from "@/lib/actions/question.action";
 
 const type: any = 'create';
 
+interface Props {
+  mongoUserId: string;
+}
 
-const Question = () => {
+
+const Question = ({mongoUserId}: Props) => {
   const editorRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const router = useRouter();
+  const router = useRouter();
+  const pathname = usePathname();
   
     const form = useForm<z.infer<typeof QuestionsSchema>>({
         resolver: zodResolver(QuestionsSchema),
@@ -46,9 +51,19 @@ const Question = () => {
 
         try {
           // make an async call to your API -> create a question
-          await createQuestion({});
+          await createQuestion({
+             title: values.title,
+             content: values.explanation,
+             tags: values.tags,
+             author: JSON.parse(mongoUserId)
+          });
+
+          // navigate to home page
+          router.push('/');
         } catch (error) {
           
+        } finally {
+          setIsSubmitting(false);
         }
       }
 
