@@ -55,7 +55,8 @@ const Question = ({mongoUserId}: Props) => {
              title: values.title,
              content: values.explanation,
              tags: values.tags,
-             author: JSON.parse(mongoUserId)
+             author: JSON.parse(mongoUserId),
+             path: pathname
           });
 
           // navigate to home page
