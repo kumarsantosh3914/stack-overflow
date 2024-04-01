@@ -6,7 +6,17 @@ export default authMiddleware({
   // Allow signed out users to access the specified routes:
   // publicRoutes: ['/anyone-can-visit-this-route'],
   publicRoutes: [
-    '/'
+    '/',
+    '/api/webhook',
+    'question/:id',
+    '/tags',
+    '/proflie/:id',
+    '/community',
+    '/jobs'
+  ],
+  ignoredRoutes: [
+    '/api/webhook',
+    'api/chatgpt'
   ]
 });
  
