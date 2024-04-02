@@ -1,12 +1,9 @@
 "use client"
-
-import React, { useRef, useState } from "react"
+import React, { useRef, useState } from 'react';
+import { Editor } from '@tinymce/tinymce-react';
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod";
-import {Editor} from '@tinymce/tinymce-react';
-
-import { Button } from "@/components/ui/button"
+import * as z from "zod"
+import { useForm } from 'react-hook-form';
 import {
   Form,
   FormControl,
@@ -17,90 +14,105 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Button } from "../ui/button"
 import { QuestionsSchema } from "@/lib/validations";
-import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
-import { Badge } from "../ui/badge";
-import { createQuestion } from "@/lib/actions/question.action";
-
-const type: any = 'create';
+import { Badge } from '../ui/badge';
+import Image from 'next/image';
+import { createQuestion, editQuestion } from '@/lib/actions/question.action';
+import { useRouter, usePathname } from 'next/navigation';
+import { useTheme } from '@/context/ThemeProvider';
 
 interface Props {
+  type?: string;
   mongoUserId: string;
+  questionDetails?: string;
 }
 
-
-const Question = ({mongoUserId}: Props) => {
+const Question = ({ type, mongoUserId, questionDetails }: Props) => {
+  const { mode } = useTheme();
   const editorRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  const parsedQuestionDetails =  questionDetails && JSON.parse(questionDetails || '');
+
+  const groupedTags = parsedQuestionDetails?.tags.map((tag: any) => tag.name)
+
+  // 1. Define your form.
+  const form = useForm<z.infer<typeof QuestionsSchema>>({
+    resolver: zodResolver(QuestionsSchema),
+    defaultValues: {
+      title: parsedQuestionDetails?.title || '',
+      explanation: parsedQuestionDetails?.content || '',
+      tags: groupedTags || []
+    },
+  })
   
-    const form = useForm<z.infer<typeof QuestionsSchema>>({
-        resolver: zodResolver(QuestionsSchema),
-        defaultValues: {
-          title: "",
-          explanation: "",
-          tags: [],
-        },
-      })
+  // 2. Define a submit handler.
+  async function onSubmit(values: z.infer<typeof QuestionsSchema>) {
+    setIsSubmitting(true);
     
-      // 2. Define a submit handler.
-      async function onSubmit(values: z.infer<typeof QuestionsSchema>) {
-        setIsSubmitting(true);
+    try {
+      if(type === 'Edit') {
+        await editQuestion({
+          questionId: parsedQuestionDetails._id,
+          title: values.title,
+          content: values.explanation,
+          path: pathname,
+        })
 
-        try {
-          // make an async call to your API -> create a question
-          await createQuestion({
-             title: values.title,
-             content: values.explanation,
-             tags: values.tags,
-             author: JSON.parse(mongoUserId),
-             path: pathname
-          });
+        router.push(`/question/${parsedQuestionDetails._id}`);
+      } else {
+        await createQuestion({
+          title: values.title,
+          content: values.explanation,
+          tags: values.tags,
+          author: JSON.parse(mongoUserId),
+          path: pathname,
+        });
 
-          // navigate to home page
-          router.push('/');
-        } catch (error) {
-          
-        } finally {
-          setIsSubmitting(false);
+        router.push('/');
+      }
+
+    } catch (error) {
+      
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, field: any) => {
+    if (e.key === 'Enter' && field.name === 'tags') {
+      e.preventDefault();
+
+      const tagInput = e.target as HTMLInputElement;
+      const tagValue = tagInput.value.trim();
+
+      if(tagValue !== '') {
+        if(tagValue.length > 15) {
+          return form.setError('tags', {
+            type: 'required',
+            message: 'Tag must be less than 15 characters.'
+          })
         }
-      }
 
-      const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>,
-        field: any
-      ) => {
-        if(e.key === 'Enter' && field.name === 'tags') {
-          e.preventDefault();
-
-          const tagInput = e.target as HTMLInputElement;
-          const tagValue = tagInput.value.trim();
-
-          if(tagValue !== '') {
-            if(tagValue.length > 15) {
-              return form.setError('tags', {
-                type: 'required',
-                message: 'Tag must be less than 15 characters.'
-              })
-            }
-
-            if(!field.value.includes(tagValue as never)) {
-              form.setValue('tags', [...field.value, tagValue]);
-              tagInput.value = ''
-              form.clearErrors('tags');
-            }
-          } else {
-            form.trigger();
-          }
+        if(!field.value.includes(tagValue as never)) {
+          form.setValue('tags', [...field.value, tagValue]);
+          tagInput.value = ''
+          form.clearErrors('tags');
         }
+      } else {
+        form.trigger();
       }
+    }
+  }
 
-      const handleTagRemove = (tag: string, field: any) => {
-        const newTags = field.value.filter((t: string) => t !== tag);
+  const handleTagRemove = (tag: string, field: any) => {
+    const newTags = field.value.filter((t: string) => t !== tag);
 
-        form.setValue('tags', newTags);
-      }
+    form.setValue('tags', newTags);
+  }
 
   return (
     <Form {...form}>
@@ -138,7 +150,7 @@ const Question = ({mongoUserId}: Props) => {
                 }}
                 onBlur={field.onBlur}
                 onEditorChange={(content) => field.onChange(content)}
-                // initialValue={parsedQuestionDetails?.content || ''}
+                initialValue={parsedQuestionDetails?.content || ''}
                 init={{
                   height: 350,
                   menubar: false,
@@ -152,8 +164,8 @@ const Question = ({mongoUserId}: Props) => {
                   'codesample | bold italic forecolor | alignleft aligncenter |' +
                   'alignright alignjustify | bullist numlist',
                   content_style: 'body { font-family:Inter; font-size:16px }',
-                  // skin: mode === 'dark' ? 'oxide-dark' : 'oxide',
-                  // content_css: mode === 'dark' ? 'dark' : 'light', 
+                  skin: mode === 'dark' ? 'oxide-dark' : 'oxide',
+                  content_css: mode === 'dark' ? 'dark' : 'light', 
                 }}
               />
               </FormControl>
@@ -218,8 +230,7 @@ const Question = ({mongoUserId}: Props) => {
         </Button>
       </form>
     </Form>
-
   )
 }
 
-export default Question;
+export default Question
