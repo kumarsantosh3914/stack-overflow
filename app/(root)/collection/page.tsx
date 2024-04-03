@@ -1,24 +1,26 @@
-import QuestionCard from '@/components/cards/QuestionCard';
-import Filter from '@/components/shared/Filter';
-import NoResult from '@/components/shared/NoResult';
-import LocalSearch from '@/components/shared/search/LocalSearch';
-import { QuestionFilters } from '@/constants/filters';
-import { getSavedQuestions } from '@/lib/actions/user.action';
-import { SearchParamsProps } from '@/types';
-import { auth } from '@clerk/nextjs';
-import React from 'react'
+import QuestionCard from "@/components/cards/QuestionCard";
+import Filter from "@/components/shared/Filter";
+import NoResult from "@/components/shared/NoResult";
+import Pagination from "@/components/shared/Pagination";
+import LocalSearch from "@/components/shared/search/LocalSearch";
+import { QuestionFilters } from "@/constants/filters";
+import { getSavedQuestions } from "@/lib/actions/user.action";
+import { SearchParamsProps } from "@/types";
+import { auth } from "@clerk/nextjs";
+import React from "react";
 
-const Page = async ({searchParams}: SearchParamsProps) => {
-    const {userId} = auth();
+const Page = async ({ searchParams }: SearchParamsProps) => {
+  const { userId } = auth();
 
-    if(!userId) return null;
+  if (!userId) return null;
 
-    const result = await getSavedQuestions({
-        clerkId: userId,
-        searchQuery: searchParams.q,
-        filter: searchParams.filter,
-    });
-    
+  const result = await getSavedQuestions({
+    clerkId: userId,
+    searchQuery: searchParams.q,
+    filter: searchParams.filter,
+    page: searchParams.page ? +searchParams.page : 1,
+  });
+
   return (
     <>
       <h1 className="h1-bold text-dark100_light900">Saved Questions</h1>
@@ -41,7 +43,7 @@ const Page = async ({searchParams}: SearchParamsProps) => {
         {result.questions.length > 0 ? (
           result.questions.map((question: any) => (
             <QuestionCard
-              key={question._id}  
+              key={question._id}
               _id={question._id}
               title={question.title}
               tags={question.tags}
@@ -61,8 +63,15 @@ const Page = async ({searchParams}: SearchParamsProps) => {
           />
         )}
       </div>
+
+      <div className="mt-10">
+        <Pagination
+          pageNumber={searchParams.page ? +searchParams.page : 1}
+          isNext={result.isNext}
+        />
+      </div>
     </>
-  )
-}
+  );
+};
 
 export default Page;
