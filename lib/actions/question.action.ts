@@ -102,12 +102,20 @@ export async function createQuestion(params: CreateQuestionParams) {
     });
 
     // Create an interaction record for the user's ask_question action
+    await Interaction.create({
+      user: author,
+      action: "ask_question",
+      question: question._id,
+      tags: tagDocuments,
+    })
 
     // Increment author's reputation by +5 for creating a question
+    await User.findByIdAndUpdate(author, {reputation: 5});
 
     revalidatePath(path);
   } catch (error) {
-    // connect to DB
+    console.log(error);
+    throw error;
   }
 }
 
